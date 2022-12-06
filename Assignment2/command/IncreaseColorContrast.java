@@ -1,5 +1,6 @@
 package command;
 
+import javafx.scene.paint.Color;
 import views.TetrisView;
 
 /**
@@ -14,10 +15,18 @@ public class IncreaseColorContrast implements Command{
     }
     @Override
     public String execute() {
-        if (receiver.colorContrast < 2) {
+        if (receiver.colorContrast == 0) {
+            this.receiver.boardColor = Color.LIGHTGREY;
+            this.receiver.blockColor = Color.BLACK;
             receiver.colorContrast++;
             return "Color contrast increased";
+        } else if (receiver.colorContrast == 1) {
+            this.receiver.boardColor = Color.WHITE;
+            this.receiver.blockColor = Color.BLACK;
+            receiver.colorContrast++;
+            return "Color contrast increased";
+        } else {
+            return "Already maximum color contrast!";
         }
-        return "Already maximum color contrast!";
     }
 }

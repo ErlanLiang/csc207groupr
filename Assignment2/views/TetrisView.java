@@ -29,9 +29,13 @@ import javafx.util.Duration;
  */
 public class TetrisView {
 
-    //0 refers to green board and red blocks (default), 1 refers to purple board and yellow blocks,
+    //0 refers to green board and red blocks (default), 1 refers to grey board and black blocks,
     //2 refers white board and black blocks
     public int colorContrast = 0;
+
+    //the color for board and block
+    public Color boardColor = Color.GREEN;
+    public Color blockColor = Color.RED;
 
     TetrisModel model; //reference to model
     Stage stage;
@@ -47,7 +51,7 @@ public class TetrisView {
     Boolean paused;
     Timeline timeline;
 
-    int pieceWidth = 20; //width of block on display
+    private int pieceWidth = 20; //width of block on display
     private double width; //height and width of canvas
     private double height;
 
@@ -310,22 +314,6 @@ public class TetrisView {
      * Draw the board
      */
     public void paintBoard() {
-
-        // Adjust the color contrast based on the value of colorContrast
-        Color boardColor;
-        Color blockColor;
-        if (colorContrast == 0) {
-            boardColor = Color.GREEN;
-            blockColor = Color.RED;
-        } else if (colorContrast == 1) {
-            boardColor = Color.PURPLE;
-            blockColor = Color.YELLOW;
-        } else {
-            boardColor = Color.WHITE;
-            blockColor = Color.BLACK;
-        }
-
-
         // Draw a rectangle around the whole screen
         gc.setStroke(Color.GREEN);
         gc.setFill(boardColor);
