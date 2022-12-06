@@ -29,10 +29,14 @@ import javafx.util.Duration;
  */
 public class TetrisView {
 
+    //0 refers to green board and red blocks (default), 1 refers to purple board and yellow blocks,
+    //2 refers white board and black blocks
+    public int colorContrast = 0;
+
     TetrisModel model; //reference to model
     Stage stage;
 
-    Button startButton, stopButton, loadButton, saveButton, newButton; //buttons for functions
+    Button startButton, stopButton, loadButton, saveButton, newButton, settingButton; //buttons for functions
     Label scoreLabel = new Label("");
     Label gameModeLabel = new Label("");
 
@@ -106,6 +110,12 @@ public class TetrisView {
         scoreLabel.setStyle("-fx-text-fill: #e8e6e3");
 
         //add buttons
+        settingButton = new Button("Setting");
+        settingButton.setId("Setting");
+        settingButton.setPrefSize(150, 50);
+        settingButton.setFont(new Font(12));
+        settingButton.setStyle("-fx-background-color: #17871b; -fx-text-fill: white;");
+
         startButton = new Button("Start");
         startButton.setId("Start");
         startButton.setPrefSize(150, 50);
@@ -136,7 +146,7 @@ public class TetrisView {
         newButton.setFont(new Font(12));
         newButton.setStyle("-fx-background-color: #17871b; -fx-text-fill: white;");
 
-        HBox controls = new HBox(20, saveButton, loadButton, newButton, startButton, stopButton);
+        HBox controls = new HBox(20, saveButton, loadButton, newButton, startButton, stopButton, settingButton);
         controls.setPadding(new Insets(20, 20, 20, 20));
         controls.setAlignment(Pos.CENTER);
 
@@ -158,6 +168,12 @@ public class TetrisView {
         timeline = new Timeline(new KeyFrame(Duration.seconds(0.25), e -> updateBoard()));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
+
+        //configure this such that you edit the setting when the user hits the settingButton
+        settingButton.setOnAction(e -> {
+            this.createSettingView();
+            this.borderPane.requestFocus();
+        });
 
         //configure this such that you start a new game when the user hits the newButton
         //Make sure to return the focus to the borderPane once you're done!
@@ -295,9 +311,24 @@ public class TetrisView {
      */
     public void paintBoard() {
 
+        // Adjust the color contrast based on the value of colorContrast
+        Color boardColor;
+        Color blockColor;
+        if (colorContrast == 0) {
+            boardColor = Color.GREEN;
+            blockColor = Color.RED;
+        } else if (colorContrast == 1) {
+            boardColor = Color.PURPLE;
+            blockColor = Color.YELLOW;
+        } else {
+            boardColor = Color.WHITE;
+            blockColor = Color.BLACK;
+        }
+
+
         // Draw a rectangle around the whole screen
         gc.setStroke(Color.GREEN);
-        gc.setFill(Color.GREEN);
+        gc.setFill(boardColor);
         gc.fillRect(0, 0, this.width-1, this.height-1);
 
         // Draw the line separating the top area on the screen
@@ -318,7 +349,7 @@ public class TetrisView {
             final int yHeight = this.model.getBoard().getColumnHeight(x);
             for (y=0; y<yHeight; y++) {
                 if (this.model.getBoard().getGrid(x, y)) {
-                    gc.setFill(Color.RED);
+                    gc.setFill(blockColor);
                     gc.fillRect(left+1, yPixel(y)+1, dx, dy);
                     gc.setFill(Color.GREEN);
                 }
@@ -341,5 +372,10 @@ public class TetrisView {
         LoadView loadView = new LoadView(this);
     }
 
-
+    /**
+     * Create the view to edit the setting of the game
+     */
+    private void createSettingView(){
+        SettingView settingViewView = new SettingView(this);
+    }
 }
