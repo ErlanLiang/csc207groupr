@@ -318,7 +318,12 @@ public class TetrisView {
             final int yHeight = this.model.getBoard().getColumnHeight(x);
             for (y=0; y<yHeight; y++) {
                 if (this.model.getBoard().getGrid(x, y)) {
-                    gc.setFill(Color.RED);
+                    if (model.Isboom) { //boom: the piece will change to black if current piece is boom.
+                        gc.setFill(Color.BLACK);
+                    }
+                    else {
+                        gc.setFill(Color.RED);
+                    }
                     gc.fillRect(left+1, yPixel(y)+1, dx, dy);
                     gc.setFill(Color.GREEN);
                 }
