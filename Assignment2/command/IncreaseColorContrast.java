@@ -15,6 +15,7 @@ public class IncreaseColorContrast implements Command{
     }
     @Override
     public String execute() {
+        //set up the colors for board and block based on different values of colorContrast
         if (receiver.colorContrast == 0) {
             this.receiver.boardColor = Color.LIGHTGREY;
             this.receiver.blockColor = Color.BLACK;

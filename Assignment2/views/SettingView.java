@@ -56,6 +56,7 @@ public class SettingView {
         settingErrorLabel.setStyle("-fx-text-fill: #e8e6e3;");
         settingErrorLabel.setFont(new Font(16));
 
+        //set up four buttons
         changeBoardColorButton = new Button("Change board's color");
         changeBoardColorButton.setId("increaseColorContrast"); // DO NOT MODIFY ID
         changeBoardColorButton.setStyle("-fx-background-color: #17871b; -fx-text-fill: white;");
@@ -84,6 +85,7 @@ public class SettingView {
         decreaseColorContrastButton.setFont(new Font(15));
         decreaseColorContrastButton.setOnAction(e -> decreaseColorContrast());
 
+        //the list of colors
         List<String> colors= Arrays.asList("RED", "WHITE", "GREEN", "BLUE", "PURPLE", "ORANGE",
                 "YELLOW", "BROWN", "CYAN", "PINK", "BLACK");
         Collections.sort(colors);
