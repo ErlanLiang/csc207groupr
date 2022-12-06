@@ -22,12 +22,18 @@ public class TetrisModel implements Serializable {
     protected int currentX, newX;
     protected int currentY, newY;
 
+    private int boomcount = 0; //count piece till it is 10
+
+    private SingleObjectBoom boom = SingleObjectBoom.getInstance(); //get the boom value for sigelton pattern
+
     // State of the game
     protected boolean gameOn;	// true if we are playing
     protected Random random;	 // the random generator for new pieces
 
     private boolean autoPilotMode; //are we in autopilot mode?
     protected TetrisPilot pilot;
+
+    public boolean Isboom = false;//boom: defult is false, if next piece is boom, then it will be true
 
     public enum MoveType {
         ROTATE,
@@ -58,6 +64,11 @@ public class TetrisModel implements Serializable {
         gameOn = true;
         score = 0;
         count = 0;
+        if(currentPiece.getBody().length == 1){   //boom:
+            currentPiece = pickNextPiece();
+        }
+        boomcount = 0;//boom
+        Isboom = false;
     }
 
     /**
@@ -139,9 +150,15 @@ public class TetrisModel implements Serializable {
      * Pick next piece to put in play on board 
      */
     private TetrisPiece pickNextPiece() {
+        if(boomcount == 10){    //boom: boomcount equal 10, then next piece would be a boom.
+            boomcount = 0;
+            Isboom = true;
+            return(boom.getPiece());
+        }
         int pieceNum;
         pieceNum = (int) (pieces.length * random.nextDouble());
         TetrisPiece piece	 = pieces[pieceNum];
+        boomcount++;
         return(piece);
     }
 
@@ -280,16 +297,34 @@ public class TetrisModel implements Serializable {
             if (currentPiece != null) board.placePiece(currentPiece, currentX, currentY);
         }
 
+
         if (failed && verb==MoveType.DOWN){	// if it's out of bounds due to falling
-            int cleared = board.clearRows();
-            if (cleared > 0) {
-                // scores go up by 5, 10, 20, 40 as more rows are cleared
-                switch (cleared) {
-                    case 1: score += 5;	 break;
-                    case 2: score += 10;  break;
-                    case 3: score += 20;  break;
-                    case 4: score += 40;  break;
-                    default: score += 50;
+            if(currentPiece.getBody().length == 1){  //boom: call the exoltion function when the boom is droped
+                int boomed = board.exolosion(currentX, currentY);
+                board.dropRows(currentY);
+                Isboom = false;
+                if (boomed > 0) {
+                    // scores go up by 2, 4, 8, 16 as more piece are cleared
+                    switch (boomed) {
+                        case 1 -> score += 2;
+                        case 2 -> score += 4;
+                        case 3 -> score += 8;
+                        case 4 -> score += 16;
+                        default -> score += 32;
+                    }
+                }
+            }
+            else {
+                int cleared = board.clearRows();
+                if (cleared > 0) {
+                    // scores go up by 5, 10, 20, 40 as more rows are cleared
+                    switch (cleared) {
+                        case 1: score += 5;	 break;
+                        case 2: score += 10;  break;
+                        case 3: score += 20;  break;
+                        case 4: score += 40;  break;
+                        default: score += 50;
+                    }
                 }
             }
 
