@@ -316,6 +316,7 @@ public class TetrisView {
     public void paintBoard() {
         // Draw a rectangle around the whole screen
         gc.setStroke(Color.GREEN);
+        //fill the board with boardColor
         gc.setFill(boardColor);
         gc.fillRect(0, 0, this.width-1, this.height-1);
 
@@ -337,6 +338,7 @@ public class TetrisView {
             final int yHeight = this.model.getBoard().getColumnHeight(x);
             for (y=0; y<yHeight; y++) {
                 if (this.model.getBoard().getGrid(x, y)) {
+                    //fill the block with blockColor
                     gc.setFill(blockColor);
                     gc.fillRect(left+1, yPixel(y)+1, dx, dy);
                     gc.setFill(Color.GREEN);

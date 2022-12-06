@@ -16,6 +16,7 @@ public class DecreaseColorContrast implements Command {
 
     @Override
     public String execute() {
+        //set up the colors for board and block based on different values of colorContrast
         if (receiver.colorContrast == 2) {
             this.receiver.boardColor = Color.LIGHTGREY;
             this.receiver.blockColor = Color.BLACK;
