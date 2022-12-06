@@ -20,6 +20,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import model.TetrisPiece;
+import model.TetrisPoint;
+
+import java.util.Arrays;
 
 
 /**
@@ -33,6 +37,8 @@ public class TetrisView {
     //2 refers white board and black blocks
     public int colorContrast = 0;
 
+    private int replaceChance = 3;   //chances for player to replace upcoming piece
+
     //the color for board and block
     public Color boardColor = Color.GREEN;
     public Color blockColor = Color.RED;
@@ -40,13 +46,21 @@ public class TetrisView {
     TetrisModel model; //reference to model
     Stage stage;
 
-    Button startButton, stopButton, loadButton, saveButton, newButton, settingButton; //buttons for functions
+    Button startButton, stopButton, loadButton, saveButton, newButton, settingButton, replaceButton; //buttons for functions
     Label scoreLabel = new Label("");
     Label gameModeLabel = new Label("");
 
+    Label nextPieceLabel = new Label("");
+
+    Label replaceChanceLabel = new Label("");
+
     BorderPane borderPane;
     Canvas canvas;
+
+    Canvas nextOne;
     GraphicsContext gc; //the graphics context will be linked to the canvas
+
+    GraphicsContext draw;
 
     Boolean paused;
     Timeline timeline;
@@ -85,6 +99,11 @@ public class TetrisView {
         canvas.setId("Canvas");
         gc = canvas.getGraphicsContext2D();
 
+        // add canvas for drawing next piece
+        nextOne = new Canvas(82, 82);
+        nextOne.setId("NextOne");
+        draw = nextOne.getGraphicsContext2D();
+
         //labels
         gameModeLabel.setId("GameModeLabel");
         scoreLabel.setId("ScoreLabel");
@@ -113,7 +132,21 @@ public class TetrisView {
         scoreLabel.setFont(new Font(20));
         scoreLabel.setStyle("-fx-text-fill: #e8e6e3");
 
+        nextPieceLabel.setText("Next piece: ");
+        nextPieceLabel.setFont(new Font(20));
+        nextPieceLabel.setStyle("-fx-text-fill: #e8e6e3");
+
+        replaceChanceLabel.setText("You have " + replaceChance + " replace chances");
+        replaceChanceLabel.setFont(new Font(20));
+        replaceChanceLabel.setStyle("-fx-text-fill: #e8e6e3");
+
         //add buttons
+        replaceButton = new Button("Replace");
+        replaceButton.setId("Replace");
+        replaceButton.setPrefSize(150, 50);
+        replaceButton.setFont(new Font(12));
+        replaceButton.setStyle("-fx-background-color: #17871b; -fx-text-fill: white;");
+
         settingButton = new Button("Setting");
         settingButton.setId("Setting");
         settingButton.setPrefSize(150, 50);
@@ -150,7 +183,7 @@ public class TetrisView {
         newButton.setFont(new Font(12));
         newButton.setStyle("-fx-background-color: #17871b; -fx-text-fill: white;");
 
-        HBox controls = new HBox(20, saveButton, loadButton, newButton, startButton, stopButton, settingButton);
+        HBox controls = new HBox(20, saveButton, loadButton, newButton, startButton, stopButton, settingButton, replaceButton);
         controls.setPadding(new Insets(20, 20, 20, 20));
         controls.setAlignment(Pos.CENTER);
 
@@ -162,7 +195,7 @@ public class TetrisView {
         vBox.setPadding(new Insets(20, 20, 20, 20));
         vBox.setAlignment(Pos.TOP_CENTER);
 
-        VBox scoreBox = new VBox(20, scoreLabel, gameModeLabel, pilotButtonHuman, pilotButtonComputer);
+        VBox scoreBox = new VBox(20, scoreLabel, replaceChanceLabel, nextPieceLabel, nextOne, gameModeLabel, pilotButtonHuman, pilotButtonComputer);
         scoreBox.setPadding(new Insets(20, 20, 20, 20));
         vBox.setAlignment(Pos.TOP_CENTER);
 
@@ -172,6 +205,14 @@ public class TetrisView {
         timeline = new Timeline(new KeyFrame(Duration.seconds(0.25), e -> updateBoard()));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
+
+        // edit the upcoming piece when the user hits the replaceButton
+        replaceButton.setOnAction(e -> {
+            if (replaceChance > 0) {
+                this.createReplaceView();
+                this.borderPane.requestFocus();
+            }
+        });
 
         //configure this such that you edit the setting when the user hits the settingButton
         settingButton.setOnAction(e -> {
@@ -281,6 +322,7 @@ public class TetrisView {
         if (this.paused != true) {
             paintBoard();
             this.model.modelTick(TetrisModel.MoveType.DOWN);
+            updateNextChance();
             updateScore();
         }
     }
@@ -292,6 +334,14 @@ public class TetrisView {
         if (this.paused != true) {
             scoreLabel.setText("Score is: " + model.getScore() + "\nPieces placed:" + model.getCount());
         }
+    }
+
+    /**
+     * Update next piece and replace chance on UI
+     */
+    private void updateNextChance() {
+        replaceChanceLabel.setText(replaceChance + " replace chances");
+        drawNext(model.getNextPiece());
     }
 
     /**
@@ -343,7 +393,7 @@ public class TetrisView {
                     }
                     else {
                         //fill the block with blockColor
-                        gc.setFill(bloackColor);
+                        gc.setFill(blockColor);
                     }
                     gc.fillRect(left+1, yPixel(y)+1, dx, dy);
                     gc.setFill(Color.GREEN);
@@ -372,5 +422,64 @@ public class TetrisView {
      */
     private void createSettingView(){
         SettingView settingViewView = new SettingView(this);
+    }
+
+    /**
+     * Create the view to replace the upcoming piece
+     */
+    private void createReplaceView(){
+        ReplaceView replaceView = new ReplaceView(this);
+    }
+
+    /**
+     * Draw the next piece on the UI
+     */
+    public void drawNext(TetrisPiece piece) {
+        draw.clearRect(0, 0, 82, 82);
+        draw.setLineWidth(3);
+        draw.setStroke(Color.BLACK);
+        draw.setFill(Color.WHITE);
+        TetrisPiece[] pieces = model.getPieces();
+        boolean flag = true;
+        for (TetrisPiece type : pieces) {
+            if (type.equals(piece)) {
+                flag = false;
+                int x = 1;
+                int y = 61;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        TetrisPoint curr = new TetrisPoint(i, j);
+                        if (Arrays.asList(piece.getBody()).contains(curr)) {
+                            draw.fillRect(82 - y, 61 - x, 20, 20);
+                            draw.strokeRect(82 - y, 61 - x, 20, 20);
+                        }
+                        x += 20;
+                    }
+                    x = 1;
+                    y -= 20;
+                }
+            }
+        }
+        if (flag) {
+            draw.fillRect(31, 31, 20, 20);
+            draw.strokeRect(31, 31, 20, 20);
+        }
+    }
+
+    /**
+     * Reduce the replace chance by 1 after
+     * each replacement
+     */
+    public void reduceChance() {
+        replaceChance -= 1;
+    }
+
+    /**
+     * Getter for replace chance
+     *
+     * @return replace chance
+     */
+    public int getChance() {
+        return replaceChance;
     }
 }
