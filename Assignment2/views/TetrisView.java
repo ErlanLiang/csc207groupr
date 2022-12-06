@@ -1,5 +1,6 @@
 package views;
 
+import model.Difficulty;
 import model.TetrisModel;
 
 import javafx.animation.KeyFrame;
@@ -46,6 +47,7 @@ public class TetrisView {
     int pieceWidth = 20; //width of block on display
     private double width; //height and width of canvas
     private double height;
+    private Difficulty difficulty;
 
     /**
      * Constructor
@@ -54,10 +56,16 @@ public class TetrisView {
      * @param stage application stage
      */
 
-    public TetrisView(TetrisModel model, Stage stage) {
+    public TetrisView(TetrisModel model, Stage stage, Difficulty difficulty) {
         this.model = model;
         this.stage = stage;
+        setDifficulty(difficulty);
         initUI();
+    }
+
+    public void setDifficulty(Difficulty difficulty){
+        this.difficulty = difficulty;
+        this.model.changeBoardSize(difficulty.getBoardWidth(), difficulty.getBoardHeight());
     }
 
     /**
@@ -156,6 +164,7 @@ public class TetrisView {
 
         //timeline structures the animation, and speed between application "ticks"
         timeline = new Timeline(new KeyFrame(Duration.seconds(0.25), e -> updateBoard()));
+        timeline.setRate(difficulty.changeDifficultySpeed());
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
 
@@ -198,7 +207,7 @@ public class TetrisView {
         //ranges between 0 and 3 times the default rate per model tick.  Make sure to return the
         //focus to the borderPane once you're done!
         slider.setOnMouseReleased(e -> {
-            this.timeline.setRate(slider.getValue() * 0.03);
+            this.timeline.setRate(slider.getValue() * 0.03 * difficulty.changeDifficultySpeed());
             this.borderPane.requestFocus();
         });
 

@@ -8,9 +8,12 @@ import java.util.Random;
  */
 public class TetrisModel implements Serializable {
 
-    public static final int WIDTH = 10; //size of the board in blocks
-    public static final int HEIGHT = 20; //height of the board in blocks
+    public static final int DEFAULT_WIDTH = 10; // default easymode size of the board in blocks
+    public static final int DEFAULT_HEIGHT = 21; // default easymode height of the board in blocks
     public static final int BUFFERZONE = 4; //space at the top
+
+    private int width;
+    private int height;
 
     protected TetrisBoard board;  // Board data structure
     protected TetrisPiece[] pieces; // Pieces to be places on the board
@@ -40,8 +43,20 @@ public class TetrisModel implements Serializable {
     /**
      * Constructor for a tetris model
      */
-    public TetrisModel() {
-        board = new TetrisBoard(WIDTH, HEIGHT + BUFFERZONE);
+    public TetrisModel() { //default to easy mode
+        this.width = DEFAULT_WIDTH;
+        this.height = DEFAULT_HEIGHT;
+        board = new TetrisBoard(DEFAULT_WIDTH, DEFAULT_HEIGHT + BUFFERZONE);
+        pieces = TetrisPiece.getPieces(); //initialize board and pieces
+        autoPilotMode = false;
+        gameOn = false;
+        pilot = new AutoPilot();
+    }
+
+    public void changeBoardSize(int width, int height) { //boardsize change
+        this.width = width;
+        this.height = height;
+        board = new TetrisBoard(width, height + BUFFERZONE);
         pieces = TetrisPiece.getPieces(); //initialize board and pieces
         autoPilotMode = false;
         gameOn = false;
@@ -184,7 +199,7 @@ public class TetrisModel implements Serializable {
      * @return width 
      */
     public double getWidth() {
-        return WIDTH;
+        return width;
     }
 
     /**
@@ -193,7 +208,7 @@ public class TetrisModel implements Serializable {
      * @return height (with buffer at top accounted for) 
      */
     public double getHeight() {
-        return HEIGHT + BUFFERZONE;
+        return height + BUFFERZONE;
     }
 
     /**
