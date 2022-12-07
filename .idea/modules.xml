@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-
-      <module fileurl="file://$PROJECT_DIR$/.idea/csc207groupr.iml" filepath="$PROJECT_DIR$/.idea/csc207groupr.iml" />
+      <module fileurl="file://$PROJECT_DIR$/csc207groupro.iml" filepath="$PROJECT_DIR$/csc207groupro.iml" />
     </modules>
   </component>
 </project>
