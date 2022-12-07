@@ -1,3 +1,4 @@
+import model.EasyMode;
 import model.TetrisModel;
 import views.TetrisView;
 
@@ -29,8 +30,11 @@ public class TetrisApp extends Application {
      */
     @Override
     public void start(Stage primaryStage) {
+        // need to make some UI to choose difficulty
+        // user pick their difficulty in the beginning
+        // default to EasyMode
         this.model = new TetrisModel(); // create a model
-        this.view = new TetrisView(model, primaryStage); //tie the model to the view
+        this.view = new TetrisView(model, primaryStage, new EasyMode()); //tie the model to the view
         this.model.startGame(); //begin
     }
 
