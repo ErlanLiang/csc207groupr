@@ -1,5 +1,6 @@
 package views;
 
+import model.Difficulty;
 import model.TetrisModel;
 
 import javafx.animation.KeyFrame;
@@ -20,6 +21,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import model.TetrisPiece;
+import model.TetrisPoint;
+
+import java.util.Arrays;
 
 
 /**
@@ -29,23 +34,42 @@ import javafx.util.Duration;
  */
 public class TetrisView {
 
+    //0 refers to green board and red blocks (default), 1 refers to grey board and black blocks,
+    //2 refers white board and black blocks
+    public int colorContrast = 0;
+
+    private int replaceChance = 3;   //chances for player to replace upcoming piece
+
+    //the color for board and block
+    public Color boardColor = Color.GREEN;
+    public Color blockColor = Color.RED;
+
     TetrisModel model; //reference to model
     Stage stage;
 
-    Button startButton, stopButton, loadButton, saveButton, newButton; //buttons for functions
+    Button startButton, stopButton, loadButton, saveButton, newButton, settingButton, replaceButton; //buttons for functions
     Label scoreLabel = new Label("");
     Label gameModeLabel = new Label("");
 
+    Label nextPieceLabel = new Label("");
+
+    Label replaceChanceLabel = new Label("");
+
     BorderPane borderPane;
     Canvas canvas;
+
+    Canvas nextOne;
     GraphicsContext gc; //the graphics context will be linked to the canvas
+
+    GraphicsContext draw;
 
     Boolean paused;
     Timeline timeline;
 
-    int pieceWidth = 20; //width of block on display
+    private int pieceWidth = 20; //width of block on display
     private double width; //height and width of canvas
     private double height;
+    private Difficulty difficulty;
 
     /**
      * Constructor
@@ -54,10 +78,16 @@ public class TetrisView {
      * @param stage application stage
      */
 
-    public TetrisView(TetrisModel model, Stage stage) {
+    public TetrisView(TetrisModel model, Stage stage, Difficulty difficulty) {
         this.model = model;
         this.stage = stage;
+        setDifficulty(difficulty);
         initUI();
+    }
+
+    public void setDifficulty(Difficulty difficulty){
+        this.difficulty = difficulty;
+        this.model.changeBoardSize(difficulty.getBoardWidth(), difficulty.getBoardHeight());
     }
 
     /**
@@ -76,6 +106,11 @@ public class TetrisView {
         canvas = new Canvas(this.width, this.height);
         canvas.setId("Canvas");
         gc = canvas.getGraphicsContext2D();
+
+        // add canvas for drawing next piece
+        nextOne = new Canvas(82, 82);
+        nextOne.setId("NextOne");
+        draw = nextOne.getGraphicsContext2D();
 
         //labels
         gameModeLabel.setId("GameModeLabel");
@@ -105,7 +140,27 @@ public class TetrisView {
         scoreLabel.setFont(new Font(20));
         scoreLabel.setStyle("-fx-text-fill: #e8e6e3");
 
+        nextPieceLabel.setText("Next piece: ");
+        nextPieceLabel.setFont(new Font(20));
+        nextPieceLabel.setStyle("-fx-text-fill: #e8e6e3");
+
+        replaceChanceLabel.setText("You have " + replaceChance + " replace chances");
+        replaceChanceLabel.setFont(new Font(20));
+        replaceChanceLabel.setStyle("-fx-text-fill: #e8e6e3");
+
         //add buttons
+        replaceButton = new Button("Replace");
+        replaceButton.setId("Replace");
+        replaceButton.setPrefSize(150, 50);
+        replaceButton.setFont(new Font(12));
+        replaceButton.setStyle("-fx-background-color: #17871b; -fx-text-fill: white;");
+
+        settingButton = new Button("Setting");
+        settingButton.setId("Setting");
+        settingButton.setPrefSize(150, 50);
+        settingButton.setFont(new Font(12));
+        settingButton.setStyle("-fx-background-color: #17871b; -fx-text-fill: white;");
+
         startButton = new Button("Start");
         startButton.setId("Start");
         startButton.setPrefSize(150, 50);
@@ -136,7 +191,7 @@ public class TetrisView {
         newButton.setFont(new Font(12));
         newButton.setStyle("-fx-background-color: #17871b; -fx-text-fill: white;");
 
-        HBox controls = new HBox(20, saveButton, loadButton, newButton, startButton, stopButton);
+        HBox controls = new HBox(20, saveButton, loadButton, newButton, startButton, stopButton, settingButton, replaceButton);
         controls.setPadding(new Insets(20, 20, 20, 20));
         controls.setAlignment(Pos.CENTER);
 
@@ -148,7 +203,7 @@ public class TetrisView {
         vBox.setPadding(new Insets(20, 20, 20, 20));
         vBox.setAlignment(Pos.TOP_CENTER);
 
-        VBox scoreBox = new VBox(20, scoreLabel, gameModeLabel, pilotButtonHuman, pilotButtonComputer);
+        VBox scoreBox = new VBox(20, scoreLabel, replaceChanceLabel, nextPieceLabel, nextOne, gameModeLabel, pilotButtonHuman, pilotButtonComputer);
         scoreBox.setPadding(new Insets(20, 20, 20, 20));
         vBox.setAlignment(Pos.TOP_CENTER);
 
@@ -156,8 +211,23 @@ public class TetrisView {
 
         //timeline structures the animation, and speed between application "ticks"
         timeline = new Timeline(new KeyFrame(Duration.seconds(0.25), e -> updateBoard()));
+        timeline.setRate(difficulty.changeDifficultySpeed());
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
+
+        // edit the upcoming piece when the user hits the replaceButton
+        replaceButton.setOnAction(e -> {
+            if (replaceChance > 0) {
+                this.createReplaceView();
+                this.borderPane.requestFocus();
+            }
+        });
+
+        //configure this such that you edit the setting when the user hits the settingButton
+        settingButton.setOnAction(e -> {
+            this.createSettingView();
+            this.borderPane.requestFocus();
+        });
 
         //configure this such that you start a new game when the user hits the newButton
         //Make sure to return the focus to the borderPane once you're done!
@@ -198,7 +268,7 @@ public class TetrisView {
         //ranges between 0 and 3 times the default rate per model tick.  Make sure to return the
         //focus to the borderPane once you're done!
         slider.setOnMouseReleased(e -> {
-            this.timeline.setRate(slider.getValue() * 0.03);
+            this.timeline.setRate(slider.getValue() * 0.03 * difficulty.changeDifficultySpeed());
             this.borderPane.requestFocus();
         });
 
@@ -261,6 +331,7 @@ public class TetrisView {
         if (this.paused != true) {
             paintBoard();
             this.model.modelTick(TetrisModel.MoveType.DOWN);
+            updateNextChance();
             updateScore();
         }
     }
@@ -272,6 +343,14 @@ public class TetrisView {
         if (this.paused != true) {
             scoreLabel.setText("Score is: " + model.getScore() + "\nPieces placed:" + model.getCount());
         }
+    }
+
+    /**
+     * Update next piece and replace chance on UI
+     */
+    private void updateNextChance() {
+        replaceChanceLabel.setText(replaceChance + " replace chances");
+        drawNext(model.getNextPiece());
     }
 
     /**
@@ -294,10 +373,10 @@ public class TetrisView {
      * Draw the board
      */
     public void paintBoard() {
-
         // Draw a rectangle around the whole screen
         gc.setStroke(Color.GREEN);
-        gc.setFill(Color.GREEN);
+        //fill the board with boardColor
+        gc.setFill(boardColor);
         gc.fillRect(0, 0, this.width-1, this.height-1);
 
         // Draw the line separating the top area on the screen
@@ -318,7 +397,13 @@ public class TetrisView {
             final int yHeight = this.model.getBoard().getColumnHeight(x);
             for (y=0; y<yHeight; y++) {
                 if (this.model.getBoard().getGrid(x, y)) {
-                    gc.setFill(Color.RED);
+                    if (model.Isboom) { //boom: the piece will change to black if current piece is boom.
+                        gc.setFill(Color.BLACK);
+                    }
+                    else {
+                        //fill the block with blockColor
+                        gc.setFill(blockColor);
+                    }
                     gc.fillRect(left+1, yPixel(y)+1, dx, dy);
                     gc.setFill(Color.GREEN);
                 }
@@ -341,5 +426,69 @@ public class TetrisView {
         LoadView loadView = new LoadView(this);
     }
 
+    /**
+     * Create the view to edit the setting of the game
+     */
+    private void createSettingView(){
+        SettingView settingViewView = new SettingView(this);
+    }
 
+    /**
+     * Create the view to replace the upcoming piece
+     */
+    private void createReplaceView(){
+        ReplaceView replaceView = new ReplaceView(this);
+    }
+
+    /**
+     * Draw the next piece on the UI
+     */
+    public void drawNext(TetrisPiece piece) {
+        draw.clearRect(0, 0, 82, 82);
+        draw.setLineWidth(3);
+        draw.setStroke(Color.BLACK);
+        draw.setFill(Color.WHITE);
+        TetrisPiece[] pieces = model.getPieces();
+        boolean flag = true;
+        for (TetrisPiece type : pieces) {
+            if (type.equals(piece)) {
+                flag = false;
+                int x = 1;
+                int y = 61;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        TetrisPoint curr = new TetrisPoint(i, j);
+                        if (Arrays.asList(piece.getBody()).contains(curr)) {
+                            draw.fillRect(82 - y, 61 - x, 20, 20);
+                            draw.strokeRect(82 - y, 61 - x, 20, 20);
+                        }
+                        x += 20;
+                    }
+                    x = 1;
+                    y -= 20;
+                }
+            }
+        }
+        if (flag) {
+            draw.fillRect(31, 31, 20, 20);
+            draw.strokeRect(31, 31, 20, 20);
+        }
+    }
+
+    /**
+     * Reduce the replace chance by 1 after
+     * each replacement
+     */
+    public void reduceChance() {
+        replaceChance -= 1;
+    }
+
+    /**
+     * Getter for replace chance
+     *
+     * @return replace chance
+     */
+    public int getChance() {
+        return replaceChance;
+    }
 }

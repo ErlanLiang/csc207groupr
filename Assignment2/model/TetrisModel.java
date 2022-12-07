@@ -8,9 +8,12 @@ import java.util.Random;
  */
 public class TetrisModel implements Serializable {
 
-    public static final int WIDTH = 10; //size of the board in blocks
-    public static final int HEIGHT = 20; //height of the board in blocks
+    public static final int DEFAULT_WIDTH = 10; // default easymode size of the board in blocks
+    public static final int DEFAULT_HEIGHT = 21; // default easymode height of the board in blocks
     public static final int BUFFERZONE = 4; //space at the top
+
+    private int width;
+    private int height;
 
     protected TetrisBoard board;  // Board data structure
     protected TetrisPiece[] pieces; // Pieces to be places on the board
@@ -22,12 +25,22 @@ public class TetrisModel implements Serializable {
     protected int currentX, newX;
     protected int currentY, newY;
 
+    private int boomcount = 0; //count piece till it is 10
+
+    private SingleObjectBoom boom = SingleObjectBoom.getInstance(); //get the boom value for sigelton pattern
+
+    private TetrisPiece nextPiece; // next upcoming piece after this
+
     // State of the game
     protected boolean gameOn;	// true if we are playing
     protected Random random;	 // the random generator for new pieces
 
     private boolean autoPilotMode; //are we in autopilot mode?
     protected TetrisPilot pilot;
+
+    public boolean Isboom = false;//boom: defult is false, if next piece is boom, then it will be true
+
+    public boolean nextChanged = false; // if next piece gets change by Replace feature
 
     public enum MoveType {
         ROTATE,
@@ -40,8 +53,20 @@ public class TetrisModel implements Serializable {
     /**
      * Constructor for a tetris model
      */
-    public TetrisModel() {
-        board = new TetrisBoard(WIDTH, HEIGHT + BUFFERZONE);
+    public TetrisModel() { //default to easy mode
+        this.width = DEFAULT_WIDTH;
+        this.height = DEFAULT_HEIGHT;
+        board = new TetrisBoard(DEFAULT_WIDTH, DEFAULT_HEIGHT + BUFFERZONE);
+        pieces = TetrisPiece.getPieces(); //initialize board and pieces
+        autoPilotMode = false;
+        gameOn = false;
+        pilot = new AutoPilot();
+    }
+
+    public void changeBoardSize(int width, int height) { //boardsize change
+        this.width = width;
+        this.height = height;
+        board = new TetrisBoard(width, height + BUFFERZONE);
         pieces = TetrisPiece.getPieces(); //initialize board and pieces
         autoPilotMode = false;
         gameOn = false;
@@ -54,10 +79,20 @@ public class TetrisModel implements Serializable {
      */
     public void startGame() { //start game
         random = new Random();
+        int pieceNum;
+        pieceNum = (int) (pieces.length * random.nextDouble());
+        TetrisPiece piece	 = pieces[pieceNum];
+        nextPiece = piece;  // create a random piece for the first placement
         addNewPiece();
+        pickNextPiece();
         gameOn = true;
         score = 0;
         count = 0;
+        if(currentPiece.getBody().length == 1){   //boom
+            currentPiece = nextPiece;
+        }
+        boomcount = 0;//boom
+        Isboom = false;
     }
 
     /**
@@ -121,13 +156,11 @@ public class TetrisModel implements Serializable {
         board.commit();
         currentPiece = null;
 
-        TetrisPiece piece = pickNextPiece();
-
         // Center it up at the top
-        int px = (board.getWidth() - piece.getWidth())/2;
-        int py = board.getHeight() - piece.getHeight();
+        int px = (board.getWidth() - nextPiece.getWidth())/2;
+        int py = board.getHeight() - nextPiece.getHeight();
 
-        int result = setCurrent(piece, px, py);
+        int result = setCurrent(nextPiece, px, py);
 
         if (result > TetrisBoard.ADD_ROW_FILLED) {
             stopGame(); //oops, we lost.
@@ -138,11 +171,18 @@ public class TetrisModel implements Serializable {
     /**
      * Pick next piece to put in play on board 
      */
-    private TetrisPiece pickNextPiece() {
+    private void pickNextPiece() {
+        if (count % 10 == 9) {  // make the 10th placing piece boom
+            nextPiece = boom.getPiece();
+            return;
+        }
+        if(count >= 10 && count % 10 == 0 && !nextChanged){    //boom: count equal 10, then next piece would be a boom.
+            Isboom = true;
+        }
         int pieceNum;
         pieceNum = (int) (pieces.length * random.nextDouble());
         TetrisPiece piece	 = pieces[pieceNum];
-        return(piece);
+        nextPiece = piece;
     }
 
     /**
@@ -184,7 +224,7 @@ public class TetrisModel implements Serializable {
      * @return width 
      */
     public double getWidth() {
-        return WIDTH;
+        return width;
     }
 
     /**
@@ -193,7 +233,7 @@ public class TetrisModel implements Serializable {
      * @return height (with buffer at top accounted for) 
      */
     public double getHeight() {
-        return HEIGHT + BUFFERZONE;
+        return height + BUFFERZONE;
     }
 
     /**
@@ -280,16 +320,34 @@ public class TetrisModel implements Serializable {
             if (currentPiece != null) board.placePiece(currentPiece, currentX, currentY);
         }
 
+
         if (failed && verb==MoveType.DOWN){	// if it's out of bounds due to falling
-            int cleared = board.clearRows();
-            if (cleared > 0) {
-                // scores go up by 5, 10, 20, 40 as more rows are cleared
-                switch (cleared) {
-                    case 1: score += 5;	 break;
-                    case 2: score += 10;  break;
-                    case 3: score += 20;  break;
-                    case 4: score += 40;  break;
-                    default: score += 50;
+            if(currentPiece.getBody().length == 1){  //boom: call the exoltion function when the boom is droped
+                int boomed = board.exolosion(currentX, currentY);
+                board.dropRows(currentY);
+                Isboom = false;
+                if (boomed > 0) {
+                    // scores go up by 2, 4, 8, 16 as more piece are cleared
+                    switch (boomed) {
+                        case 1 -> score += 2;
+                        case 2 -> score += 4;
+                        case 3 -> score += 8;
+                        case 4 -> score += 16;
+                        default -> score += 32;
+                    }
+                }
+            }
+            else {
+                int cleared = board.clearRows();
+                if (cleared > 0) {
+                    // scores go up by 5, 10, 20, 40 as more rows are cleared
+                    switch (cleared) {
+                        case 1: score += 5;	 break;
+                        case 2: score += 10;  break;
+                        case 3: score += 20;  break;
+                        case 4: score += 40;  break;
+                        default: score += 50;
+                    }
                 }
             }
 
@@ -301,6 +359,7 @@ public class TetrisModel implements Serializable {
             // Otherwise, add a new piece and keep playing
             else {
                 addNewPiece();
+                pickNextPiece();
             }
         }
 
@@ -334,6 +393,57 @@ public class TetrisModel implements Serializable {
      */
     public boolean getAutoPilotMode() {
         return this.autoPilotMode;
+    }
+
+    /**
+     * Getter for pieces
+     *
+     * @return all the piece types
+     */
+    public TetrisPiece[] getPieces() {
+        return pieces;
+    }
+
+    /**
+     * Getter for the upcoming piece after
+     * the current one
+     *
+     * @return the upcoming piece
+     */
+    public TetrisPiece getNextPiece() {
+        return nextPiece;
+    }
+
+    /**
+     * Set the upcoming piece by player
+     */
+    public void setNext(TetrisPiece piece) {
+        nextPiece = piece;
+    }
+
+    /**
+     * Set the flag that represents if upcoming piece
+     * has been changed by player
+     *
+     * @param bol if it has been change
+     */
+    public void setNextChanged(boolean bol) {
+        nextChanged = bol;
+    }
+
+    /**
+     * Set IsBoom to false
+     * useful when player changes upcoming piece
+     */
+    public void setIsBoomFalse() {
+        Isboom = false;
+    }
+
+    /**
+     * Getter for boom piece
+     */
+    public TetrisPiece getBoom() {
+        return boom.getPiece();
     }
 }
 
